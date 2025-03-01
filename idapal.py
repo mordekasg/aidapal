@@ -340,7 +340,7 @@ def unload_plugin():
 
 # Minimal Plugin Structure Stub
 class aiDAPalPlugin(idaapi.plugin_t):
-    flags = 0
+    flags = idaapi.PLUGIN_MULTI | idaapi.PLUGIN_MOD
     comment = "aiDAPal Plugin"
     help = "Analyzes and enhances functions in IDA"
     wanted_name = "aiDAPal"
