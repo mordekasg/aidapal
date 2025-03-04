@@ -5,6 +5,7 @@ import ida_bytes
 import ida_name
 import logging
 
+# Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -13,14 +14,14 @@ def get_all_comments(ea):
     Helper to return both repeatable and non repeatable comments for a given address
     returns empty string if no comment
     '''
-    cmt = ida_bytes.get_cmt(ea,False)
-    r_cmt = ida_bytes.get_cmt(ea,True)
+    cmt = ida_bytes.get_cmt(ea, False)
+    r_cmt = ida_bytes.get_cmt(ea, True)
     if cmt is None:
         if r_cmt is None:
             return ''
         return r_cmt
     return f'{cmt} - {r_cmt}'
-    
+
 
 def gather_unique_data_references(function_ea):
     '''
@@ -41,27 +42,27 @@ def gather_unique_data_references(function_ea):
         for head in idautils.FuncItems(function_ea):
             # Get all cross-references from the current instruction
             for xref in idautils.DataRefsFrom(head):
-                logging.debug(f"Xref from 0x{head:X} to 0x{xref:X} flags: {hex(idc.get_full_flags(xref))} name: {ida_name.get_name(xref)}")
+                logging.debug(
+                    f"Xref from 0x{head:X} to 0x{xref:X} flags: {hex(idc.get_full_flags(xref))} name: {ida_name.get_name(xref)}")
                 # Ignore targets that have no flags - skip addresses to local type/struct
                 if not idc.get_full_flags(xref):
                     logging.debug(f"Skipping 0x{xref:X} due to no flags")
                     continue
-            
+
                 # Ignore offsets or invalid xrefs (immediates)
                 if idc.get_operand_type(head, 0) in (idc.o_displ, idc.o_imm):
                     logging.debug(f"Skipping 0x{xref:X} due to operand type")
                     continue
-                
+
                 # Get name of the target address if it exists
                 name = ida_name.get_name(xref)
                 data_info = ''
-                
+
                 # Ignore default named items sub_,off_,dword_etc, keep unamed items
                 if not ida_name.is_uname(name) and name != '':
                     logging.debug(f"Skipping 0x{xref:X} due to default name {name}")
                     continue
-                    
-                    
+
                 # Get regular and repeatable comments at the target address
                 comment = get_all_comments(xref)
                 data_info += f'{hex(xref)} is {name} // {comment}'
@@ -71,7 +72,6 @@ def gather_unique_data_references(function_ea):
                 if idc.is_tail(idc.get_full_flags(xref)):
                     # Get the head address
                     head_addr = idc.get_item_head(xref)
-                    
 
                     # Check if the head is a structure - get info from it
                     if idc.is_struct(idc.get_full_flags(head_addr)):
@@ -80,19 +80,20 @@ def gather_unique_data_references(function_ea):
                         # Get structure ID from head address
                         struct_name = idc.get_type(head_addr)
                         struc_id = idc.get_struc_id(struct_name)
-                        
+
                         # Get offset into structure for current address
-                        member_offset = xref - head_addr 
+                        member_offset = xref - head_addr
                         # Get the structure member ID
-                        member_id = idc.get_member_id(struc_id,member_offset)
-                        
+                        member_id = idc.get_member_id(struc_id, member_offset)
+
                         if struc_id != idc.BADADDR:
                             # Get the structure member name, size, and comment
-                            member_name = (idc.get_member_name(struc_id,member_offset) or "undefined")
-                            member_size = idc.get_member_size(struc_id,member_offset) or 0
-                            member_cmt = (idc.get_member_cmt(struc_id,member_offset,False) or "") + (idc.get_member_cmt(struc_id,member_offset,True) or "")
+                            member_name = (idc.get_member_name(struc_id, member_offset) or "undefined")
+                            member_size = idc.get_member_size(struc_id, member_offset) or 0
+                            member_cmt = (idc.get_member_cmt(struc_id, member_offset, False) or "") + (
+                                        idc.get_member_cmt(struc_id, member_offset, True) or "")
                             data_info = f'0x{xref:X} is {struct_instance_name}->{member_name} //size:0x{member_size:x} cmt:{member_cmt} struct_type:{struct_name}'
-                            
+
                     # Its not a struct - get the head name and comment if it exists
                     else:
                         # Check if the head has a name or comment
@@ -105,7 +106,7 @@ def gather_unique_data_references(function_ea):
                                 data_info += f" {head_name}[{hex(data_offset)}]"
                             if head_comment:
                                 data_info += f" //{head_comment}"
-                
+
                 # Store the details (origin instruction, xref, name, comments)
                 data_references.append(data_info)
 
@@ -116,6 +117,7 @@ def gather_unique_data_references(function_ea):
     except Exception as e:
         print(f"An error occurred: {e}")
         return []
+
 
 """def main():
     # Get the current address of the cursor
